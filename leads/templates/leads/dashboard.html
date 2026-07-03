@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lead Tracker Dashboard</title>
+<style>
+  :root {
+    --navy: #1a2942; --navy-light: #2d3f5f; --blue: #3b6fe0; --blue-light: #eaf0fd;
+    --green: #1b8a5a; --green-bg: #e2f6ec; --yellow: #9a6b00; --yellow-bg: #fff3d6;
+    --gray: #6b7280; --gray-bg: #eef1f5; --red: #c0392b; --red-bg: #fce8e6;
+    --border: #e4e8ef; --bg: #f5f7fb; --white: #ffffff;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: var(--bg); color: #1f2937; }
+  .topbar { background: linear-gradient(135deg, var(--navy) 0%, var(--navy-light) 100%); color: var(--white); padding: 28px 40px; }
+  .topbar h1 { margin: 0 0 4px 0; font-size: 24px; font-weight: 600; }
+  .topbar p { margin: 0; color: #b9c4d9; font-size: 14px; }
+  .stats-row { display: flex; gap: 18px; padding: 24px 40px 0 40px; flex-wrap: wrap; }
+  .stat-card { background: var(--white); border-radius: 12px; padding: 20px 24px; min-width: 180px; flex: 1; box-shadow: 0 1px 3px rgba(16,24,40,0.06); border: 1px solid var(--border); }
+  .stat-card .label { font-size: 13px; color: var(--gray); font-weight: 500; text-transform: uppercase; margin-bottom: 8px; }
+  .stat-card .value { font-size: 32px; font-weight: 700; color: var(--navy); }
+  .stat-card.accent-blue .value { color: var(--blue); }
+  .stat-card.accent-green .value { color: var(--green); }
+  .stat-card.accent-yellow .value { color: var(--yellow); }
+  .main-layout { display: flex; gap: 24px; padding: 24px 40px 40px 40px; align-items: flex-start; flex-wrap: wrap; }
+  .panel { background: var(--white); border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 1px 3px rgba(16,24,40,0.06); }
+  .panel-header { padding: 18px 24px; border-bottom: 1px solid var(--border); font-size: 16px; font-weight: 600; color: var(--navy); }
+  .form-panel { flex: 0 0 340px; }
+  .form-body { padding: 22px 24px 24px 24px; }
+  .field-group { margin-bottom: 16px; }
+  .field-group label { display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 6px; }
+  .form-control { width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; }
+  .form-control:focus { outline: none; border-color: var(--blue); box-shadow: 0 0 0 3px var(--blue-light); }
+  .field-error { color: var(--red); font-size: 12.5px; margin-top: 5px; }
+  .submit-btn { width: 100%; padding: 11px; background: var(--blue); color: var(--white); border: none; border-radius: 8px; font-size: 14.5px; font-weight: 600; cursor: pointer; margin-top: 4px; }
+  .submit-btn:hover { background: #2f5fc9; }
+  .table-panel { flex: 1; min-width: 420px; }
+  table { width: 100%; border-collapse: collapse; }
+  thead th { text-align: left; font-size: 12px; text-transform: uppercase; color: var(--gray); padding: 12px 24px; border-bottom: 1px solid var(--border); background: #fafbfc; }
+  tbody td { padding: 14px 24px; border-bottom: 1px solid var(--border); font-size: 14px; }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover { background: #fafbfc; }
+  .lead-name { font-weight: 600; color: #1f2937; }
+  .lead-email { color: var(--gray); font-size: 13px; }
+  .badge { display: inline-block; padding: 4px 12px; border-radius: 999px; font-size: 12.5px; font-weight: 600; }
+  .badge-new { background: var(--gray-bg); color: #4b5563; }
+  .badge-in-progress { background: var(--yellow-bg); color: var(--yellow); }
+  .badge-converted { background: var(--green-bg); color: var(--green); }
+  .source-tag { color: var(--gray); font-size: 13.5px; }
+  .empty-state { padding: 40px 24px; text-align: center; color: var(--gray); font-size: 14px; }
+  .messages { padding: 0 40px; margin-top: 20px; }
+  .alert { padding: 12px 16px; border-radius: 8px; font-size: 14px; margin-bottom: 10px; }
+  .alert-success { background: var(--green-bg); color: var(--green); border: 1px solid #b8e6cc; }
+  .alert-error { background: var(--red-bg); color: var(--red); border: 1px solid #f3c6c1; }
+  @media (max-width: 800px) {
+    .topbar, .stats-row, .main-layout, .messages { padding-left: 18px; padding-right: 18px; }
+    .form-panel { flex: 1 1 100%; }
+    .table-panel { min-width: 0; }
+  }
+</style>
+</head>
+<body>
+
+  <div class="topbar">
+    <h1>Lead Tracker</h1>
+    <p>Capture, monitor, and convert your team's sales pipeline</p>
+  </div>
+
+  <div class="stats-row">
+    <div class="stat-card accent-blue">
+      <div class="label">Total Leads</div>
+      <div class="value">{{ total_leads }}</div>
+    </div>
+    <div class="stat-card accent-green">
+      <div class="label">Converted Leads</div>
+      <div class="value">{{ converted_leads }}</div>
+    </div>
+    <div class="stat-card">
+      <div class="label">New</div>
+      <div class="value">{{ new_leads }}</div>
+    </div>
+    <div class="stat-card accent-yellow">
+      <div class="label">In Progress</div>
+      <div class="value">{{ in_progress_leads }}</div>
+    </div>
+  </div>
+
+  {% if messages %}
+  <div class="messages">
+    {% for message in messages %}
+      <div class="alert {% if message.tags == 'success' %}alert-success{% else %}alert-error{% endif %}">
+        {{ message }}
+      </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <div class="main-layout">
+
+    <div class="panel form-panel">
+      <div class="panel-header">Add New Lead</div>
+      <div class="form-body">
+        <form method="post" novalidate>
+          {% csrf_token %}
+
+          <div class="field-group">
+            <label for="{{ form.full_name.id_for_label }}">Full Name</label>
+            {{ form.full_name }}
+            {% for error in form.full_name.errors %}
+              <div class="field-error">{{ error }}</div>
+            {% endfor %}
+          </div>
+
+          <div class="field-group">
+            <label for="{{ form.email.id_for_label }}">Email</label>
+            {{ form.email }}
+            {% for error in form.email.errors %}
+              <div class="field-error">{{ error }}</div>
+            {% endfor %}
+          </div>
+
+          <div class="field-group">
+            <label for="{{ form.source.id_for_label }}">Source</label>
+            {{ form.source }}
+            {% for error in form.source.errors %}
+              <div class="field-error">{{ error }}</div>
+            {% endfor %}
+          </div>
+
+          <div class="field-group">
+            <label for="{{ form.status.id_for_label }}">Status</label>
+            {{ form.status }}
+            {% for error in form.status.errors %}
+              <div class="field-error">{{ error }}</div>
+            {% endfor %}
+          </div>
+
+          {% if form.non_field_errors %}
+            <div class="field-error">{{ form.non_field_errors }}</div>
+          {% endif %}
+
+          <button type="submit" class="submit-btn">Add Lead</button>
+        </form>
+      </div>
+    </div>
+
+    <div class="panel table-panel">
+      <div class="panel-header">All Leads</div>
+      {% if leads %}
+      <table>
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Source</th>
+            <th>Status</th>
+            <th>Added</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for lead in leads %}
+          <tr>
+            <td>
+              <div class="lead-name">{{ lead.full_name }}</div>
+              <div class="lead-email">{{ lead.email }}</div>
+            </td>
+            <td><span class="source-tag">{{ lead.source }}</span></td>
+            <td>
+              {% if lead.status == "Converted" %}
+                <span class="badge badge-converted">Converted</span>
+              {% elif lead.status == "In Progress" %}
+                <span class="badge badge-in-progress">In Progress</span>
+              {% else %}
+                <span class="badge badge-new">New</span>
+              {% endif %}
+            </td>
+            <td class="source-tag">{{ lead.created_at|date:"M d, Y" }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+        <div class="empty-state">No leads yet. Add your first lead using the form on the left.</div>
+      {% endif %}
+    </div>
+
+  </div>
+
+</body>
+</html>
